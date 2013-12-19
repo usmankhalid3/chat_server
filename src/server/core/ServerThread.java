@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.List;
 
 import server.common.Constants;
@@ -42,34 +43,42 @@ public class ServerThread extends Thread {
 			socket.setTcpNoDelay(true);
 			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	        String line = null;
-	        write("=>");
-	        while ((line = input.readLine()) != null) {
-	        	line = line.trim();
-	        	if (!loggedIn()) {
+	        boolean quit = false;
+	        while (!quit) {
+	        	if (!askedForLogin && !loggedIn()) {
 	        		if (!askedForLogin) {
-	        			dout.writeUTF("Login Name?\n");
-	        		}
-	        		else {
-	        			login(line);
+	        			write("<= Login Name?\n");
+	        			askedForLogin = true;
 	        		}
 	        	}
 	        	else {
-		        	ParsedInput parsedInput = parseInput(line);
-		        	if (parsedInput.isMessage()) {	// it's a message
-			        	server.broadcast(this, line);	 
-		        	}
-		        	else {	// it's a command
-		        		Command command = parsedInput.getCommand();
-		        		if (command.isValid()) {
-		        			dispatchCommand(command);
-		        		}
-		        		else {
-		        			//TODO:report this blasphemy!
-		        		}
-		        	}
+	        		line = read(input);
+	        		if (!loggedIn()) {
+	        			login(line);
+	        		}
+	        		else {
+			        	ParsedInput parsedInput = parseInput(line);
+			        	if (parsedInput.isMessage()) {	// it's a message
+			        		if (!line.isEmpty()) {
+			        			server.broadcast(this, line);
+			        		}
+			        	}
+			        	else {	// it's a command
+			        		Command command = parsedInput.getCommand();
+			        		if (command.isValid()) {
+			        			dispatchCommand(command);
+			        		}
+			        		else {
+			        			//TODO:report this blasphemy!
+			        		}
+			        	}
+	        		}
 	        	}
-	        	write("\n=>");
 	        }
+		}
+		catch (SocketException e) {
+			server.removeConnection(this);
+			shutDown();
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -77,12 +86,26 @@ public class ServerThread extends Thread {
 		finally {
 			// The connection is closed for one reason or another,
 			// so have the server dealing with it
-			server.removeConnection(this);
+			if (server != null) {
+				server.removeConnection(this);
+				shutDown();
+			}
+		}
+	}
+	
+	private String read(BufferedReader input) throws IOException {
+		write("=> ");
+		String line = input.readLine();
+		if (line != null) {
+			return line;
+		}
+		else {
+			return "";
 		}
 	}
 	
 	private boolean loggedIn() {
-		return user == null;
+		return user != null;
 	}
 	
 	private void login(String nick) {
@@ -190,6 +213,7 @@ public class ServerThread extends Thread {
 	
 	public void shutDown() {
 		// Make sure it's closed
+		Utils.stdOut("Shutting down..." + socket);
 		try {
 			dout.close();
 			socket.close();
@@ -204,14 +228,14 @@ public class ServerThread extends Thread {
 		return socket;
 	}
 	
-	private void write(String message) throws Exception {
+	private void write(String message) throws IOException {
 		dout.writeUTF(message);
 		dout.flush();
 	}
 	
 	public void sendMessage(String message) {
 		try {
-			dout.writeUTF("<=" + message);
+			dout.writeUTF("<= " + message + "\n");
 		} catch (IOException ie) {
 			Utils.stdOut(ie.getMessage());
 		}

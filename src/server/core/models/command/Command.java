@@ -15,20 +15,18 @@ public class Command {
 	private void parse(String line) {
 		String[] parts = line.split(" ");
 		String cmd = parts[0];
-		String args = parts[1];
 		this.type = CommandType.parse(cmd);
-		if (type.args() > 0) {
-			if (args != null && !args.isEmpty()) {
-				parseArgs(args);
-			} 
+		if (type != null) {
+			if (type.args() > 0 && parts.length > 1) {
+				parseArgs(parts);
+			}
 		}
 	}
 	
-	private void parseArgs(String args) {
+	private void parseArgs(String[] parts) {
 		this.args = new ArrayList<String>();
-		String[] parts = args.split(",");
-		for (String arg : parts) {
-			this.args.add(arg);
+		for (int i = 1; i < parts.length; i++) {	// i starts from 1 because 0 is the cmd type
+			this.args.add(parts[i]);
 		}
 	}
 	

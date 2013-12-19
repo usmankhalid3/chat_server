@@ -110,7 +110,6 @@ public class Server {
 			Utils.stdOut("Removing connection to " + clientId);
 			// Remove it from our hashmap
 			clients.remove(clientId);
-			client.shutDown();
 		}
 	}
 
