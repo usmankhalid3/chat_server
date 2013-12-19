@@ -9,4 +9,8 @@ public class Utils {
 	public static void stdErr(String msg) {
 		System.err.println(msg);
 	}
+	
+	public static String chomp(String str) {
+		return str.replaceAll("(\\r|\\n|\\r\\n)", "");
+	}
 }

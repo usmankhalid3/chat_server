@@ -47,7 +47,7 @@ public class ServerThread extends Thread {
 	        while (!quit) {
 	        	if (!askedForLogin && !loggedIn()) {
 	        		if (!askedForLogin) {
-	        			write("<= Login Name?\n");
+	        			write("<= Login Name?");
 	        			askedForLogin = true;
 	        		}
 	        	}
@@ -94,10 +94,10 @@ public class ServerThread extends Thread {
 	}
 	
 	private String read(BufferedReader input) throws IOException {
-		write("=> ");
+		prompt("=> ");
 		String line = input.readLine();
 		if (line != null) {
-			return line;
+			return Utils.chomp(line.trim());
 		}
 		else {
 			return "";
@@ -108,9 +108,13 @@ public class ServerThread extends Thread {
 		return user != null;
 	}
 	
-	private void login(String nick) {
+	private void login(String nick) throws IOException {
+		if (nick == null || nick.isEmpty()) {
+			askedForLogin = false;
+		}
 		if (server.userExists(nick)) {
-			//TODO: implement the logic of returning an error
+			write("Sorry, name taken");
+			askedForLogin = false;
 		}
 		else {
 			user = new User();
@@ -229,8 +233,13 @@ public class ServerThread extends Thread {
 	}
 	
 	private void write(String message) throws IOException {
-		dout.writeUTF(message);
+		dout.writeUTF(message + "\n");
 		dout.flush();
+	}
+	
+	private void prompt(String message) throws IOException {
+		dout.writeUTF(message);
+		dout.flush();		
 	}
 	
 	public void sendMessage(String message) {
