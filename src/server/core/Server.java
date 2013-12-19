@@ -55,6 +55,15 @@ public class Server {
 		clients.put(socket, thread);
 
 	}
+	
+	boolean userExists(String nick) {
+		for (ServerThread client : clients.values()) {
+			if (client.belongsTo(nick)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	void createRoom(Room room) {
 		rooms.put(room.getName().toLowerCase(), room);

@@ -4,8 +4,6 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.net.Socket;
 import java.util.List;
 
@@ -24,8 +22,8 @@ public class ServerThread extends Thread {
 	// The Socket connected to our client
 	private Socket socket;
 	private DataOutputStream dout = null;
-	private Writer output = null;
 	private User user = null;
+	private boolean askedForLogin = false;
 
 	// Constructor.
 	public ServerThread(Server server, Socket socket) throws IOException {
@@ -43,25 +41,33 @@ public class ServerThread extends Thread {
 		try {
 			socket.setTcpNoDelay(true);
 			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-	        output = new OutputStreamWriter(socket.getOutputStream());
 	        String line = null;
 	        write("=>");
 	        while ((line = input.readLine()) != null) {
-	        	ParsedInput parsedInput = parseInput(line);
-	        	if (parsedInput.isMessage()) {	// it's a message
-	        		 
-	        	}
-	        	else {	// it's a command
-	        		Command command = parsedInput.getCommand();
-	        		if (command.isValid()) {
-	        			dispatchCommand(command);
+	        	line = line.trim();
+	        	if (!loggedIn()) {
+	        		if (!askedForLogin) {
+	        			dout.writeUTF("Login Name?\n");
 	        		}
 	        		else {
-	        			//TODO:report this blasphemy!
+	        			login(line);
 	        		}
 	        	}
-	        	server.broadcast(this, line);
-	        	line = line.trim();
+	        	else {
+		        	ParsedInput parsedInput = parseInput(line);
+		        	if (parsedInput.isMessage()) {	// it's a message
+			        	server.broadcast(this, line);	 
+		        	}
+		        	else {	// it's a command
+		        		Command command = parsedInput.getCommand();
+		        		if (command.isValid()) {
+		        			dispatchCommand(command);
+		        		}
+		        		else {
+		        			//TODO:report this blasphemy!
+		        		}
+		        	}
+	        	}
 	        	write("\n=>");
 	        }
 		}
@@ -72,6 +78,21 @@ public class ServerThread extends Thread {
 			// The connection is closed for one reason or another,
 			// so have the server dealing with it
 			server.removeConnection(this);
+		}
+	}
+	
+	private boolean loggedIn() {
+		return user == null;
+	}
+	
+	private void login(String nick) {
+		if (server.userExists(nick)) {
+			//TODO: implement the logic of returning an error
+		}
+		else {
+			user = new User();
+			user.setAllowsPrivateMessages(true);
+			user.setNick(nick);
 		}
 	}
 	
@@ -118,11 +139,13 @@ public class ServerThread extends Thread {
 		}
 		else {
 			server.createRoom(new Room(name, user, Constants.ROOM_MEMBER_LIMIT));
+			//TODO: implement the logic of returning success
 		}
 	}
 	
 	private void listRooms(Command cmd) {
 		List<Room> rooms = server.getRooms();
+		//TODO: implement the logic of returning list
 	}
 	
 	private void enterRoom(Command cmd) {
@@ -132,7 +155,7 @@ public class ServerThread extends Thread {
 			Room room = server.getRoom(name);
 			boolean couldJoin = room.join(user);
 			if (couldJoin) {
-				
+				//TODO: implement the logic of returning success
 			}
 			else {
 				//TODO: implement the logic of returning an error
@@ -182,8 +205,8 @@ public class ServerThread extends Thread {
 	}
 	
 	private void write(String message) throws Exception {
-		output.write(message);
-		output.flush();
+		dout.writeUTF(message);
+		dout.flush();
 	}
 	
 	public void sendMessage(String message) {
@@ -192,5 +215,9 @@ public class ServerThread extends Thread {
 		} catch (IOException ie) {
 			Utils.stdOut(ie.getMessage());
 		}
+	}
+	
+	public boolean belongsTo(String nick) {
+		return loggedIn() && user.getNick().equalsIgnoreCase(nick);
 	}
 }
