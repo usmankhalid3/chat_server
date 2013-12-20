@@ -15,7 +15,7 @@ public class Command {
 	private void parse(String line) {
 		String[] parts = line.split(" ");
 		String cmd = parts[0];
-		this.type = CommandType.parse(cmd);
+		this.type = CommandType.parse(cmd.substring(1));
 		if (type != null) {
 			if (type.args() > 0 && parts.length > 1) {
 				parseArgs(parts);

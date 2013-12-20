@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import server.core.models.Room;
+import server.core.models.room.Room;
 import server.util.Utils;
 
 import com.google.common.collect.Lists;
@@ -85,18 +85,18 @@ public class Server {
 		return Lists.newArrayList(rooms.values());
 	}
 	
-	// Send a message to all clients (utility routine)
-	void broadcast(ServerThread sender, String message) {
-		// We synchronize on this because another thread might be
-		// calling removeConnection() and this would screw us up
-		// as we tried to walk through the list
-		synchronized (clients) {
-			// For each client ...
-			for (ServerThread client : clients.values()) {
-				client.sendMessage(sender, message);
-			}
-		}
-	}
+//	// Send a message to all clients (utility routine)
+//	void broadcast(ServerThread sender, String message) {
+//		// We synchronize on this because another thread might be
+//		// calling removeConnection() and this would screw us up
+//		// as we tried to walk through the list
+//		synchronized (clients) {
+//			// For each client ...
+//			for (ServerThread client : clients.values()) {
+//				client.sendMessage(sender, message);
+//			}
+//		}
+//	}
 
 	// Remove a socket, and it's corresponding output stream, from our
 	// list. This is usually called by a connection thread that has

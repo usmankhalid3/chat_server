@@ -13,6 +13,7 @@ public enum CommandType {
 	private int args;
 	private CommandType(String cmd, int args) {
 		this.cmd = cmd;
+		this.args = args;
 	}
 	public String cmd() {
 		return cmd;

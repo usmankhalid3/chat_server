@@ -11,10 +11,11 @@ import java.util.List;
 import server.common.Constants;
 import server.core.models.ParsedInput;
 import server.core.models.ParsedInput.ParseResult;
-import server.core.models.Room;
 import server.core.models.User;
 import server.core.models.command.Command;
 import server.core.models.command.CommandType;
+import server.core.models.room.Room;
+import server.core.models.room.RoomMessageDispatcher;
 import server.util.Utils;
 
 public class ServerThread extends Thread {
@@ -47,7 +48,7 @@ public class ServerThread extends Thread {
 	        while (!quit) {
 	        	if (!askedForLogin && !loggedIn()) {
 	        		if (!askedForLogin) {
-	        			write("<= Login Name?");
+	        			write("Login Name?");
 	        			askedForLogin = true;
 	        		}
 	        	}
@@ -56,11 +57,14 @@ public class ServerThread extends Thread {
 	        		if (!loggedIn()) {
 	        			login(line);
 	        		}
-	        		else {
+	        		else if (!line.isEmpty()){
 			        	ParsedInput parsedInput = parseInput(line);
 			        	if (parsedInput.isMessage()) {	// it's a message
-			        		if (!line.isEmpty()) {
-			        			server.broadcast(this, line);
+			        		if (user.hasJoinedRoom()) {
+			        			new RoomMessageDispatcher(user.getRoom(), this, line);
+			        		}
+			        		else {
+			        			write("Unidentified command");
 			        		}
 			        	}
 			        	else {	// it's a command
@@ -85,9 +89,7 @@ public class ServerThread extends Thread {
 		finally {
 			// The connection is closed for one reason or another,
 			// so have the server dealing with it
-			if (server != null) {
-				terminateSession();
-			}
+			terminateSession();
 		}
 	}
 	
@@ -112,7 +114,7 @@ public class ServerThread extends Thread {
 		}
 		else {
 			if (server.userExists(nick)) {
-				write("Sorry, name taken");
+				write("Sorry, this name is taken");
 				askedForLogin = false;
 			}
 			else {
@@ -145,7 +147,7 @@ public class ServerThread extends Thread {
 		return line != null && line.startsWith(Constants.commandSpecifier);
 	}
 	
-	private void dispatchCommand(Command cmd) {
+	private void dispatchCommand(Command cmd) throws IOException {
 		CommandType type = cmd.getType();
 		switch(type) {
 			case CREATE_ROOM: createRoom(cmd); break;
@@ -158,45 +160,79 @@ public class ServerThread extends Thread {
 		}
 	}
 	
-	private void createRoom(Command cmd) {
+	private void createRoom(Command cmd) throws IOException {
+		if (user.hasJoinedRoom()) {
+			write("Cannot create a room while being in one");
+			return;
+		}
 		List<String> args = cmd.getArgs();
-		String name = args.get(0);
+		String name = args.get(0);		
 		if (server.roomExists(name)) {
-			//TODO: implement the logic of returning an error
+			write("A room with this name already exists. Please select a different name.");
+			return;
 		}
 		else {
-			server.createRoom(new Room(name, user, Constants.ROOM_MEMBER_LIMIT));
-			//TODO: implement the logic of returning success
+			Room room = new Room(name, this, Constants.ROOM_MEMBER_LIMIT);
+			server.createRoom(room);
+			write("Room created: " + name);
+			joinRoom(room);
 		}
 	}
 	
-	private void listRooms(Command cmd) {
+	private void listRooms(Command cmd) throws IOException {
 		List<Room> rooms = server.getRooms();
-		//TODO: implement the logic of returning list
+		if (rooms == null || rooms.isEmpty()) {
+			write("No active rooms");
+			return;
+		}
+		for (Room room : rooms) {
+			write("\t* " + room.getName());
+		}
+		write("End of list");
 	}
 	
-	private void enterRoom(Command cmd) {
+	private void joinRoom(Room room) throws IOException {
+		boolean couldJoin = room.join(this);
+		if (couldJoin) {
+			write("Entering room: " + room.getName());
+			listMembers(room);
+		}
+		else {
+			write("Room is already full. Please try again later!");
+		}	
+	}
+	
+	private void enterRoom(Command cmd) throws IOException {
+		if (user.hasJoinedRoom()) {
+			write("Cannot join a room while being in one");
+			return;
+		}
 		List<String> args = cmd.getArgs();
 		String name = args.get(0);
 		if (server.roomExists(name)) {
 			Room room = server.getRoom(name);
-			boolean couldJoin = room.join(user);
-			if (couldJoin) {
-				//TODO: implement the logic of returning success
-			}
-			else {
-				//TODO: implement the logic of returning an error
-			}	
+			joinRoom(room);
 		}
 		else {
-			//TODO: implement the logic of returning an error
+			write("This room does not exist");
 		}
 	}
+	
+	private void listMembers(Room room) throws IOException {
+		for (ServerThread member : room.getMembers()) {
+			String message = "\t* " + member.getUser().getNick();
+			if (member.equals(user)) {
+				message += " (** this is you)";
+			}
+			write(message);
+		}
+		write("End of list");
+	}
 
-	private void leaveRoom(Command cmd) {
-		if (user.hasJoinedARoom()) {
+	private void leaveRoom(Command cmd) throws IOException {
+		if (user.hasJoinedRoom()) {
 			Room room = server.getRoom(user.getRoom().getName());
-			room.leave(user);
+			room.leave(this);
 		}
 		else {
 			//TODO: implement the logic of returning an error
@@ -216,20 +252,18 @@ public class ServerThread extends Thread {
 	}
 	
 	private void terminateSession() {
-		server.removeConnection(this);
-		shutDown();
-	}
-	
-	private void shutDown() {
-		// Make sure it's closed
-		Utils.stdOut("Shutting down..." + socket);
-		try {
-			dout.close();
-			socket.close();
-			server = null;
-		} catch (IOException ie) {
-			Utils.stdOut("Error closing " + socket);
-			throw new RuntimeException(ie);
+		if (server != null) {
+			server.removeConnection(this);
+			// Make sure it's closed
+			Utils.stdOut("Shutting down..." + socket);
+			try {
+				dout.close();
+				socket.close();
+				server = null;
+			} catch (IOException ie) {
+				Utils.stdOut("Error closing " + socket);
+				throw new RuntimeException(ie);
+			}
 		}
 	}
 	
@@ -238,7 +272,7 @@ public class ServerThread extends Thread {
 	}
 	
 	private void write(String message) throws IOException {
-		dout.writeUTF(message + "\n");
+		dout.writeUTF("<= " + message + "\n");
 		dout.flush();
 	}
 	
@@ -273,7 +307,7 @@ public class ServerThread extends Thread {
 	public void sendMessage(ServerThread sender, String message) {
 		try { 
 			String outgoing = createOutgoingMessage(message, sender);
-			dout.writeUTF(outgoing);
+			prompt(outgoing);
 		} catch (IOException ie) {
 			Utils.stdOut(ie.getMessage());
 		}

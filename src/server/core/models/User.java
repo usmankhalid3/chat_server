@@ -1,5 +1,7 @@
 package server.core.models;
 
+import server.core.models.room.Room;
+
 public class User {
 
 	private String nick;
@@ -27,7 +29,12 @@ public class User {
 	public void leaveRoom() {
 		this.room = null;
 	}
-	public boolean hasJoinedARoom() {
+	public boolean hasJoinedRoom() {
 		return room != null;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		return nick.equalsIgnoreCase(((User)obj).nick);
 	}
 }
