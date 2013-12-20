@@ -77,8 +77,7 @@ public class ServerThread extends Thread {
 	        }
 		}
 		catch (SocketException e) {
-			server.removeConnection(this);
-			shutDown();
+			terminateSession();
 		}
 		catch (Exception e) {
 			throw new RuntimeException(e);
@@ -87,8 +86,7 @@ public class ServerThread extends Thread {
 			// The connection is closed for one reason or another,
 			// so have the server dealing with it
 			if (server != null) {
-				server.removeConnection(this);
-				shutDown();
+				terminateSession();
 			}
 		}
 	}
@@ -112,14 +110,16 @@ public class ServerThread extends Thread {
 		if (nick == null || nick.isEmpty()) {
 			askedForLogin = false;
 		}
-		if (server.userExists(nick)) {
-			write("Sorry, name taken");
-			askedForLogin = false;
-		}
 		else {
-			user = new User();
-			user.setAllowsPrivateMessages(true);
-			user.setNick(nick);
+			if (server.userExists(nick)) {
+				write("Sorry, name taken");
+				askedForLogin = false;
+			}
+			else {
+				user = new User();
+				user.setAllowsPrivateMessages(true);
+				user.setNick(nick);
+			}
 		}
 	}
 	
@@ -215,7 +215,12 @@ public class ServerThread extends Thread {
 		//TODO: implement this feature		
 	}
 	
-	public void shutDown() {
+	private void terminateSession() {
+		server.removeConnection(this);
+		shutDown();
+	}
+	
+	private void shutDown() {
 		// Make sure it's closed
 		Utils.stdOut("Shutting down..." + socket);
 		try {
@@ -242,9 +247,33 @@ public class ServerThread extends Thread {
 		dout.flush();		
 	}
 	
-	public void sendMessage(String message) {
-		try {
-			dout.writeUTF("<= " + message + "\n");
+	public User getUser() {
+		return user;
+	}
+	
+	public String createOutgoingMessage(String message, ServerThread sender) {
+		boolean self = sender.belongsTo(user.getNick());
+		StringBuilder outgoing = new StringBuilder("");
+		if (!self) { 
+			outgoing.append("\n");
+		
+		}
+		outgoing.append("<= ");
+		outgoing.append(sender.user.getNick());
+		outgoing.append(" says: ");
+		outgoing.append(message);
+		outgoing.append("\n");
+		if (!self) { 
+			outgoing.append("=> ");
+		
+		}
+		return outgoing.toString();
+	}
+	
+	public void sendMessage(ServerThread sender, String message) {
+		try { 
+			String outgoing = createOutgoingMessage(message, sender);
+			dout.writeUTF(outgoing);
 		} catch (IOException ie) {
 			Utils.stdOut(ie.getMessage());
 		}

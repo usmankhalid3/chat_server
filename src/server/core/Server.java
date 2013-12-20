@@ -93,7 +93,7 @@ public class Server {
 		synchronized (clients) {
 			// For each client ...
 			for (ServerThread client : clients.values()) {
-				client.sendMessage(message);
+				client.sendMessage(sender, message);
 			}
 		}
 	}
