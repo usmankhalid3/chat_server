@@ -3,8 +3,9 @@ package server.core.models.command;
 public enum CommandType {
 	CREATE_ROOM("create", 1, "/create <name> to create a new room."),
 	LIST_ROOMS("rooms", 0, "/rooms to list all active rooms."),
+	LIST_MEMBERS("members", 0, "/members to list all members in the room."),
 	ENTER_ROOM("join", 1, "/join <name> to join a room."),
-	LEAVE_ROOM("leave", 0, "/leave to leave the currently joined room."),
+	LEAVE_ROOM("leave", 0, "/leave to leave the room."),
 	START_PRIVATE("private", 1, "/private <name> to start private chat with a user"),
 	QUIT("quit", 0, "/quit to quit chat."),
 	HELP("help", 0, "/help for getting help");

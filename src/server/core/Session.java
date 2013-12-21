@@ -33,7 +33,7 @@ public class Session extends Thread {
 		// Save the parameters
 		this.server = server;
 		this.socket = socket;
-		this.writer = new PrintWriter(socket.getOutputStream());
+		this.writer = new PrintWriter(socket.getOutputStream(), true);
 		// Start up the thread
 		start();
 	}
@@ -159,6 +159,7 @@ public class Session extends Thread {
 		switch(type) {
 			case CREATE_ROOM: createRoom(cmd); break;
 			case LIST_ROOMS: listRooms(cmd); break;
+			case LIST_MEMBERS: listMembers(); break;
 			case ENTER_ROOM: enterRoom(cmd); break;
 			case LEAVE_ROOM: leaveRoom(false); break;
 			case START_PRIVATE: startPrivateChat(cmd); break;
@@ -193,7 +194,7 @@ public class Session extends Thread {
 	private void listRooms(Command cmd) throws IOException {
 		List<Room> rooms = server.getRooms();
 		if (rooms == null || rooms.isEmpty()) {
-			write(Messages.ROOM_NOACTIVE);
+			write(Messages.ROOM_NO_ACTIVE);
 			return;
 		}
 		write(Messages.ROOM_ACTIVE);
@@ -235,7 +236,16 @@ public class Session extends Thread {
 		}
 	}
 	
+	private void listMembers() throws IOException {
+		if (!user.hasJoinedRoom()) {
+			write(Messages.ROOM_NOT_JOINED);
+			return;
+		}
+		listMembers(user.getRoom());
+	}
+	
 	private void listMembers(Room room) throws IOException {
+		write(Messages.ROOM_MEMBERS);
 		for (Session member : room.getMembers()) {
 			String message = "\t* " + member.getUser().getNick();
 			if (member.getUser().equals(user)) {
@@ -295,8 +305,7 @@ public class Session extends Thread {
 	}
 	
 	private void write(String message) throws IOException {
-		writer.write("<= " + message + "\n");
-		writer.flush();
+		writer.println("<= " + message);
 	}
 	
 	private void prompt(String message) throws IOException {
