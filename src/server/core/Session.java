@@ -258,8 +258,11 @@ public class Session extends Thread {
 		//TODO: implement this feature
 	}
 	
-	private void showHelp() {
-		//TODO: implement this feature		
+	private void showHelp() throws IOException {
+		CommandType[] commands = CommandType.values();
+		for (CommandType command : commands) {
+			write("\t* " + command.getHelpText());
+		}
 	}
 	
 	private void quit() throws IOException {
@@ -302,13 +305,13 @@ public class Session extends Thread {
 		return user;
 	}
 	
-	public String createOutgoingMessage(String message, Session sender, boolean isNotif) {
+	private String createOutgoingMessage(String message, Session sender, boolean isNotif) {
 		boolean self = false;
-		if (!isNotif && sender.belongsTo(user.getNick())) {
+		if (sender.belongsTo(user.getNick())) {
 			self = true;
 		}
 		StringBuilder outgoing = new StringBuilder("");
-		if (!self && !isNotif) { 
+		if (!self) { 
 			outgoing.append("\n");
 		
 		}

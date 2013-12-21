@@ -12,8 +12,8 @@ public class Messages {
 	public static String ROOM_FULL = "Room is full. Please try again later!";
 	public static String ROOM_ACTION = "Please leave the room to perform this action";
 	public static String ROOM_NOT_JOINED = "You are not in any room";
-	public static String USER_JOINED = "* {0} has joined the room";
-	public static String USER_LEFT = "* {0} has left the room: {1}";
+	public static String USER_JOINED = "\t* {0} has joined the room";
+	public static String USER_LEFT = "\t* {0} has left the room: {1}";
 	public static String USER_IDENTIFY = " (** this is you)";
 	public static String SYS_END_OF_LIST = "End of list";
 	public static String SYS_NOT_IN_ROOM = "Please join a room to chat!";
