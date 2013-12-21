@@ -196,8 +196,11 @@ public class Session extends Thread {
 			write(Messages.ROOM_NOACTIVE);
 			return;
 		}
+		write(Messages.ROOM_ACTIVE);
 		for (Room room : rooms) {
-			write("\t* " + room.getName());
+			String name = room.getName();
+			String members = String.valueOf(room.getMembers().size());
+			write(Utils.formatMessage(Messages.ROOM_NAME, name, members));
 		}
 		write(Messages.SYS_END_OF_LIST);
 	}
@@ -235,7 +238,7 @@ public class Session extends Thread {
 	private void listMembers(Room room) throws IOException {
 		for (Session member : room.getMembers()) {
 			String message = "\t* " + member.getUser().getNick();
-			if (member.equals(user)) {
+			if (member.getUser().equals(user)) {
 				message += Messages.USER_IDENTIFY;
 			}
 			write(message);
@@ -249,7 +252,7 @@ public class Session extends Thread {
 			room.leave(this);
 			RoomMessageDispatcher.notifyUserLeave(this, room);
 		}
-		else if (!forcefully){
+		else if (!forcefully) {
 			write(Messages.ROOM_NOT_JOINED);
 		}
 	}

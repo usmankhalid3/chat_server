@@ -4,6 +4,8 @@ public class Messages {
 
 	public static String WELCOME_MESSAGE = "\n*********Welcome to my Chat Server!*******\n\n";
 	public static String GOOD_BYE = "Good Bye, {0}!";
+	public static String ROOM_NAME = "\t* {0} ({1})";
+	public static String ROOM_ACTIVE = "Active rooms are:";
 	public static String ROOM_NOACTIVE = "No active rooms";
 	public static String ROOM_CREATED = "Created room: {0}";
 	public static String ROOM_JOINED = "Entered room: {0}";
