@@ -19,7 +19,7 @@ public class Server {
 	// A mapping from sockets to DataOutputStreams. This will
 	// help us avoid having to create a DataOutputStream each time
 	// we want to write to a stream.
-	private Map<Socket, ServerThread> clients = new HashMap<Socket, ServerThread>();
+	private Map<Socket, Session> clients = new HashMap<Socket, Session>();
 	private Map<String, Room> rooms = new HashMap<String, Room>();
 
 	// Constructor and while-accept loop all in one.
@@ -50,14 +50,14 @@ public class Server {
 		// Create a new thread for this connection, and then forget
 		// about it
         dout.writeUTF(Messages.WELCOME_MESSAGE);
-		ServerThread thread = new ServerThread(this, socket);
+		Session thread = new Session(this, socket);
 		// Save this thread so we don't need to make it again
 		clients.put(socket, thread);
 
 	}
 	
 	boolean userExists(String nick) {
-		for (ServerThread client : clients.values()) {
+		for (Session client : clients.values()) {
 			if (client.belongsTo(nick)) {
 				return true;
 			}
@@ -101,7 +101,7 @@ public class Server {
 	// Remove a socket, and it's corresponding output stream, from our
 	// list. This is usually called by a connection thread that has
 	// discovered that the connection to the client is dead.
-	void removeConnection(ServerThread client) {
+	void removeConnection(Session client) {
 		// Synchronize so we don't mess up sendToAll() while it walks
 		// down the list of all output streams
 		synchronized (clients) {

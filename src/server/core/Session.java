@@ -1,9 +1,9 @@
 package server.core;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.List;
@@ -18,21 +18,22 @@ import server.core.models.room.Room;
 import server.core.models.room.RoomMessageDispatcher;
 import server.util.Utils;
 
-public class ServerThread extends Thread {
+public class Session extends Thread {
 	// The Server that spawned us
 	private Server server;
 	// The Socket connected to our client
 	private Socket socket;
-	private DataOutputStream dout = null;
+	private PrintWriter writer = null;
 	private User user = null;
 	private boolean askedForLogin = false;
+    boolean quit = false;
 
 	// Constructor.
-	public ServerThread(Server server, Socket socket) throws IOException {
+	public Session(Server server, Socket socket) throws IOException {
 		// Save the parameters
 		this.server = server;
 		this.socket = socket;
-		this.dout = new DataOutputStream(socket.getOutputStream());
+		this.writer = new PrintWriter(socket.getOutputStream());
 		// Start up the thread
 		start();
 	}
@@ -44,7 +45,6 @@ public class ServerThread extends Thread {
 			socket.setTcpNoDelay(true);
 			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	        String line = null;
-	        boolean quit = false;
 	        while (!quit) {
 	        	if (!askedForLogin && !loggedIn()) {
 	        		if (!askedForLogin) {
@@ -61,22 +61,24 @@ public class ServerThread extends Thread {
 			        	ParsedInput parsedInput = parseInput(line);
 			        	if (parsedInput.isMessage()) {	// it's a message
 			        		if (user.hasJoinedRoom()) {
-			        			new RoomMessageDispatcher(user.getRoom(), this, line);
+			        			new RoomMessageDispatcher(user.getRoom(), this, line, true, false);
 			        		}
 			        		else {
-			        			write("Unidentified command");
+			        			write(Messages.SYS_NOT_IN_ROOM);
 			        		}
 			        	}
-			        	else {	// it's a command
+			        	else if (parsedInput.isInvalidCommand()) {
+			        		write(Messages.SYS_INVALID_COMMAND);
+			        	}
+			        	else if (parsedInput.isMissingArgs()) {
+			        		write(Messages.SYS_CMD_MISSING_ARGS);
+			        	}
+			        	else {
 			        		Command command = parsedInput.getCommand();
-			        		if (command.isValid()) {
-			        			dispatchCommand(command);
-			        		}
-			        		else {
-			        			//TODO:report this blasphemy!
-			        		}
+	        				dispatchCommand(command);
 			        	}
 	        		}
+	        		//writer.flush();
 	        	}
 	        }
 		}
@@ -114,13 +116,18 @@ public class ServerThread extends Thread {
 		}
 		else {
 			if (server.userExists(nick)) {
-				write("Sorry, this name is taken");
+				write(Messages.SYS_NAME_TAKEN);
 				askedForLogin = false;
 			}
-			else {
-				user = new User();
-				user.setAllowsPrivateMessages(true);
-				user.setNick(nick);
+			else { 
+				if (Utils.isValidName(nick)){
+					user = new User();
+					user.setAllowsPrivateMessages(true);
+					user.setNick(nick);
+				}
+				else {
+					write(Messages.SYS_INVALID_NAME);
+				}
 			}
 		}
 	}
@@ -129,16 +136,16 @@ public class ServerThread extends Thread {
 		ParsedInput input = new ParsedInput();
 		if (isCommand(line)) {
 			Command command = new Command(line);
-			if (!command.isValid()) {
+			input.setResult(ParseResult.VALID_COMMAND);
+			input.setCommand(command);
+			boolean valid = command.isValid();
+			boolean missingArgs = command.isMissingArgs(); 
+			if (!valid) {
 				input.setResult(ParseResult.INVALID_COMMAND);
 			}
-			else if (command.isMissingArgs()) {
-				input.setResult(ParseResult.ERROR_MISSING_ARGS);
+			if (missingArgs) {
+				input.setResult(ParseResult.CMD_MISSING_ARGS);
 			}
-			else {
-				input.setResult(ParseResult.VALID_COMMAND);
-			}
-			input.setCommand(command);
 		}
 		return input;
 	}
@@ -153,7 +160,7 @@ public class ServerThread extends Thread {
 			case CREATE_ROOM: createRoom(cmd); break;
 			case LIST_ROOMS: listRooms(cmd); break;
 			case ENTER_ROOM: enterRoom(cmd); break;
-			case LEAVE_ROOM: leaveRoom(cmd); break;
+			case LEAVE_ROOM: leaveRoom(false); break;
 			case START_PRIVATE: startPrivateChat(cmd); break;
 			case HELP: showHelp(); break;
 			case QUIT: quit(); break;
@@ -162,80 +169,88 @@ public class ServerThread extends Thread {
 	
 	private void createRoom(Command cmd) throws IOException {
 		if (user.hasJoinedRoom()) {
-			write("Cannot create a room while being in one");
+			write(Messages.ROOM_ACTION);
 			return;
 		}
 		List<String> args = cmd.getArgs();
-		String name = args.get(0);		
+		String name = args.get(0);
+		if (!Utils.isValidName(name)) {
+			write(Messages.SYS_INVALID_NAME);
+			return;
+		}
 		if (server.roomExists(name)) {
-			write("A room with this name already exists. Please select a different name.");
+			write(Messages.ROOM_EXISTS);
 			return;
 		}
 		else {
 			Room room = new Room(name, this, Constants.ROOM_MEMBER_LIMIT);
 			server.createRoom(room);
-			write("Room created: " + name);
-			joinRoom(room);
+			write(Utils.formatMessage(Messages.ROOM_CREATED, name));
+			joinRoom(room, true);
 		}
 	}
 	
 	private void listRooms(Command cmd) throws IOException {
 		List<Room> rooms = server.getRooms();
 		if (rooms == null || rooms.isEmpty()) {
-			write("No active rooms");
+			write(Messages.ROOM_NOACTIVE);
 			return;
 		}
 		for (Room room : rooms) {
 			write("\t* " + room.getName());
 		}
-		write("End of list");
+		write(Messages.SYS_END_OF_LIST);
 	}
 	
-	private void joinRoom(Room room) throws IOException {
+	private void joinRoom(Room room, boolean onCreation) throws IOException {
 		boolean couldJoin = room.join(this);
 		if (couldJoin) {
-			write("Entering room: " + room.getName());
-			listMembers(room);
+			write(Utils.formatMessage(Messages.ROOM_JOINED, room.getName()));
+			if (!onCreation) {
+				listMembers(room);
+				RoomMessageDispatcher.notifyUserJoin(this);
+			}
 		}
 		else {
-			write("Room is already full. Please try again later!");
+			write(Messages.ROOM_FULL);
 		}	
 	}
 	
 	private void enterRoom(Command cmd) throws IOException {
 		if (user.hasJoinedRoom()) {
-			write("Cannot join a room while being in one");
+			write(Messages.ROOM_ACTION);
 			return;
 		}
 		List<String> args = cmd.getArgs();
 		String name = args.get(0);
 		if (server.roomExists(name)) {
 			Room room = server.getRoom(name);
-			joinRoom(room);
+			joinRoom(room, false);
 		}
 		else {
-			write("This room does not exist");
+			write(Messages.ROOM_INVALID);
 		}
 	}
 	
 	private void listMembers(Room room) throws IOException {
-		for (ServerThread member : room.getMembers()) {
+		for (Session member : room.getMembers()) {
 			String message = "\t* " + member.getUser().getNick();
 			if (member.equals(user)) {
-				message += " (** this is you)";
+				message += Messages.USER_IDENTIFY;
 			}
 			write(message);
 		}
-		write("End of list");
+		write(Messages.SYS_END_OF_LIST);
 	}
 
-	private void leaveRoom(Command cmd) throws IOException {
+	private void leaveRoom(boolean forcefully) throws IOException {
 		if (user.hasJoinedRoom()) {
 			Room room = server.getRoom(user.getRoom().getName());
 			room.leave(this);
+			RoomMessageDispatcher.notifyUserLeave(this, room);
 		}
-		else {
-			//TODO: implement the logic of returning an error
+		else if (!forcefully){
+			write(Messages.ROOM_NOT_JOINED);
 		}
 	}
 	
@@ -247,8 +262,10 @@ public class ServerThread extends Thread {
 		//TODO: implement this feature		
 	}
 	
-	private void quit() {
-		//TODO: implement this feature		
+	private void quit() throws IOException {
+		leaveRoom(true);
+		quit = true;
+		write(Utils.formatMessage(Messages.GOOD_BYE, user.getNick()));		
 	}
 	
 	private void terminateSession() {
@@ -257,7 +274,7 @@ public class ServerThread extends Thread {
 			// Make sure it's closed
 			Utils.stdOut("Shutting down..." + socket);
 			try {
-				dout.close();
+				writer.close();
 				socket.close();
 				server = null;
 			} catch (IOException ie) {
@@ -272,41 +289,46 @@ public class ServerThread extends Thread {
 	}
 	
 	private void write(String message) throws IOException {
-		dout.writeUTF("<= " + message + "\n");
-		dout.flush();
+		writer.write("<= " + message + "\n");
+		writer.flush();
 	}
 	
 	private void prompt(String message) throws IOException {
-		dout.writeUTF(message);
-		dout.flush();		
+		writer.write(message);
+		writer.flush();
 	}
 	
 	public User getUser() {
 		return user;
 	}
 	
-	public String createOutgoingMessage(String message, ServerThread sender) {
-		boolean self = sender.belongsTo(user.getNick());
+	public String createOutgoingMessage(String message, Session sender, boolean isNotif) {
+		boolean self = false;
+		if (!isNotif && sender.belongsTo(user.getNick())) {
+			self = true;
+		}
 		StringBuilder outgoing = new StringBuilder("");
-		if (!self) { 
+		if (!self && !isNotif) { 
 			outgoing.append("\n");
 		
 		}
 		outgoing.append("<= ");
-		outgoing.append(sender.user.getNick());
-		outgoing.append(" says: ");
+		if (!isNotif) {
+			outgoing.append(sender.user.getNick());
+			outgoing.append(" says: ");
+		}
 		outgoing.append(message);
 		outgoing.append("\n");
-		if (!self) { 
+		if (!self && !isNotif) { 
 			outgoing.append("=> ");
 		
 		}
 		return outgoing.toString();
 	}
 	
-	public void sendMessage(ServerThread sender, String message) {
+	public void sendMessage(Session sender, String message, boolean isNotif) {
 		try { 
-			String outgoing = createOutgoingMessage(message, sender);
+			String outgoing = createOutgoingMessage(message, sender, isNotif);
 			prompt(outgoing);
 		} catch (IOException ie) {
 			Utils.stdOut(ie.getMessage());

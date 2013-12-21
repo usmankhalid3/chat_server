@@ -42,7 +42,11 @@ public class Command {
 		return type != null;
 	}
 	
+	public boolean needsArgs() {
+		return isValid() && type.args() > 0;
+	}
+	
 	public boolean isMissingArgs() {
-		return type.args() > 0 && (args == null || args.size() < type.args());
+		return needsArgs() && (args == null || args.size() < type.args());
 	}
 }

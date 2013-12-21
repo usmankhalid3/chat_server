@@ -8,7 +8,7 @@ public class ParsedInput {
 		MESSAGE,
 		VALID_COMMAND,
 		INVALID_COMMAND,
-		ERROR_MISSING_ARGS
+		CMD_MISSING_ARGS
 	}
 	
 	private Command command = null;
@@ -28,5 +28,11 @@ public class ParsedInput {
 	}
 	public boolean isMessage() {
 		return result == ParseResult.MESSAGE;
+	}
+	public boolean isInvalidCommand() {
+		return result == ParseResult.INVALID_COMMAND;
+	}
+	public boolean isMissingArgs() {
+		return result == ParseResult.CMD_MISSING_ARGS;
 	}
 }
