@@ -2,7 +2,7 @@ package server.core;
 
 public class Messages {
 
-	public static String WELCOME_MESSAGE = "\n*********Welcome to my Chat Server!*******\n\n";
+	public static String WELCOME_MESSAGE = "\n*********Welcome to my Chat Server!*******\nType /help to get help!\n\n";
 	public static String GOOD_BYE = "Good Bye, {0}!";
 	public static String ROOM_MEMBERS = "Active members are:";
 	public static String ROOM_NAME = "\t* {0} ({1})";

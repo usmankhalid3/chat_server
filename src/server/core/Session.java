@@ -162,7 +162,7 @@ public class Session extends Thread {
 			case LIST_MEMBERS: listMembers(); break;
 			case ENTER_ROOM: enterRoom(cmd); break;
 			case LEAVE_ROOM: leaveRoom(false); break;
-			case START_PRIVATE: startPrivateChat(cmd); break;
+			//case START_PRIVATE: startPrivateChat(cmd); break;
 			case HELP: showHelp(); break;
 			case QUIT: quit(); break;
 		}
