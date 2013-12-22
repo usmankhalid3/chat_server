@@ -4,7 +4,7 @@ ERR_LOG=$LOG_DIR/err.log
 
 echo "Compiling..."
 COMPILED = `javac -d ../../chat_server -sourcepath src -cp .:libs/guava-11.0.2.jar ../src/server/Main.java`
-if [ $IS_AWAKE -ge 1 ]; then
+if [ $COMPILED -ge 1 ]; then
 	echo "Failed to compile!!!"
 	exit 1
 fi
