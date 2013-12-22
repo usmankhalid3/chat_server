@@ -6,7 +6,7 @@ PORT=5555
 echo "Compiling..."
 javac -d ../../chat_server -sourcepath ../src -cp ../:../libs/guava-11.0.2.jar ../src/server/Main.java
 COMPILED=$?
-if [ $COMPILED ]; then
+if [ $COMPILED -ge 1 ]; then
 	echo "Failed to compile!!!"
 	exit 1
 fi
