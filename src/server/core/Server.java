@@ -1,6 +1,5 @@
 package server.core;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -44,12 +43,8 @@ public class Server {
 	}
 	
 	private void createClient(Socket socket) throws IOException {
-		// Create a DataOutputStream for writing data to the
-		// other side
-		DataOutputStream dout = new DataOutputStream(socket.getOutputStream());
 		// Create a new thread for this connection, and then forget
 		// about it
-        dout.writeUTF(Messages.WELCOME_MESSAGE);
 		Session thread = new Session(this, socket);
 		// Save this thread so we don't need to make it again
 		clients.put(socket, thread);

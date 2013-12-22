@@ -45,6 +45,7 @@ public class Session extends Thread {
 			socket.setTcpNoDelay(true);
 			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	        String line = null;
+	        writer.println(Messages.WELCOME_MESSAGE);
 	        while (!quit) {
 	        	if (!askedForLogin && !loggedIn()) {
 	        		if (!askedForLogin) {
@@ -78,7 +79,6 @@ public class Session extends Thread {
 	        				dispatchCommand(command);
 			        	}
 	        		}
-	        		//writer.flush();
 	        	}
 	        }
 		}
@@ -334,7 +334,7 @@ public class Session extends Thread {
 		}
 		outgoing.append(message);
 		outgoing.append("\n");
-		if (!self && !isNotif) { 
+		if (!self) { 
 			outgoing.append("=> ");
 		
 		}
