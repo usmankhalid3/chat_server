@@ -4,13 +4,14 @@ ERR_LOG=$LOG_DIR/err.log
 PORT=5555
 
 echo "Compiling..."
-javac -d ../../chat_server -sourcepath ../src -cp ../:../libs/guava-11.0.2.jar ../src/server/Main.java
+javac -d ../../chat_server -sourcepath ../src -cp ../:../libs/*.jar ../src/server/Main.java
+cp -R libs/*.jar ../../chat_server/libs/
 COMPILED=$?
 if [ $COMPILED -ge 1 ]; then
 	echo "Failed to compile!!!"
 	exit 1
 fi
 echo "Running server..."
-cd ../../
-echo "nohup java -cp chat_server/:../libs/guava-11.0.2.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &" >> $OUT_LOG
-nohup java -cp ../chat_server/:../libs/guava-11.0.2.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &
+cd "../../chat_server/"
+echo "nohup java -cp libs/*.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &" >> $OUT_LOG
+nohup java -cp libs/*.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &
