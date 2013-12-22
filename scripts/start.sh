@@ -13,5 +13,5 @@ if [ $COMPILED -ge 1 ]; then
 fi
 echo "Running server..."
 cd "../../chat_server/"
-echo "nohup java -cp libs/guava-11.0.2.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &" >> $OUT_LOG
-nohup java -cp libs/guava-11.0.2.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &
+echo "nohup java -cp .:libs/guava-11.0.2.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &" >> $OUT_LOG
+nohup java -cp .:libs/guava-11.0.2.jar server.Main $PORT 1>> $OUT_LOG 2>> $ERR_LOG &
