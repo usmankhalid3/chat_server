@@ -4,7 +4,8 @@ ERR_LOG=$LOG_DIR/err.log
 PORT=5555
 
 echo "Compiling..."
-COMPILED=`javac -d ../../chat_server -sourcepath ../src -cp ../:../libs/guava-11.0.2.jar ../src/server/Main.java`
+javac -d ../../chat_server -sourcepath ../src -cp ../:../libs/guava-11.0.2.jar ../src/server/Main.java
+COMPILED=$?
 if [ $COMPILED ]; then
 	echo "Failed to compile!!!"
 	exit 1
