@@ -1,7 +1,7 @@
 LOG_DIR=~/chat_server/logs
 OUT_LOG=$LOG_DIR/out.log
 ERR_LOG=$LOG_DIR/err.log
-PORT = 5555
+PORT=5555
 
 echo "Compiling..."
 COMPILED = `javac -d ../../chat_server -sourcepath ../src -cp ../:../libs/guava-11.0.2.jar ../src/server/Main.java`
