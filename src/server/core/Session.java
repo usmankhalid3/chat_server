@@ -124,6 +124,7 @@ public class Session extends Thread {
 					user = new User();
 					user.setAllowsPrivateMessages(true);
 					user.setNick(nick);
+					Utils.stdOut("User logged in: " + nick);
 				}
 				else {
 					write(Messages.SYS_INVALID_NAME);
