@@ -6,9 +6,8 @@ public enum CommandType {
 	LIST_MEMBERS("members", 0, "/members to list all members in the room."),
 	ENTER_ROOM("join", 1, "/join <name> to join a room."),
 	LEAVE_ROOM("leave", 0, "/leave to leave the room."),
-	//START_PRIVATE("private", 1, "/private <name> to start private chat with a user"),
 	QUIT("quit", 0, "/quit to quit chat."),
-	HELP("help", 0, "/help for getting help");
+	HELP("help", 0, "/help to get help.");
 	
 	private String cmd;
 	private int args;

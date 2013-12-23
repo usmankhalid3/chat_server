@@ -162,7 +162,6 @@ public class Session extends Thread {
 			case LIST_MEMBERS: listMembers(); break;
 			case ENTER_ROOM: enterRoom(cmd); break;
 			case LEAVE_ROOM: leaveRoom(false); break;
-			//case START_PRIVATE: startPrivateChat(cmd); break;
 			case HELP: showHelp(); break;
 			case QUIT: quit(); break;
 		}
@@ -265,10 +264,6 @@ public class Session extends Thread {
 		else if (!forcefully) {
 			write(Messages.ROOM_NOT_JOINED);
 		}
-	}
-	
-	private void startPrivateChat(Command cmd) {
-		//TODO: implement this feature
 	}
 	
 	private void showHelp() throws IOException {
