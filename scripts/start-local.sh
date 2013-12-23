@@ -1,6 +1,6 @@
 
-SRC_DIR=~/chat
-DST_DIR=~/chat_server
+SRC_DIR=~/Desktop/Projects/chat
+DST_DIR=~/Desktop/Projects/chat_server
 
 LOG_DIR=$DST_DIR/logs
 OUT_LOG=$LOG_DIR/out.log
