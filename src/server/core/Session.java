@@ -89,8 +89,6 @@ public class Session extends Thread {
 			throw new RuntimeException(e);
 		} 
 		finally {
-			// The connection is closed for one reason or another,
-			// so have the server dealing with it
 			terminateSession();
 		}
 	}

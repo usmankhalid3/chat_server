@@ -15,11 +15,11 @@ import com.google.common.collect.Lists;
 public class Server {
 	// The ServerSocket we'll use for accepting new connections
 	private ServerSocket serverSocket;
-	// A mapping from sockets to DataOutputStreams. This will
-	// help us avoid having to create a DataOutputStream each time
-	// we want to write to a stream.
+	// A mapping from sockets to sessions.
 	private Map<Socket, Session> clients = new HashMap<Socket, Session>();
 	private Map<String, Room> rooms = new HashMap<String, Room>();
+	private Map<String, Long> lastLogged = new HashMap<String, Long>();
+	private long loginDelay = 1000;
 
 	// Constructor and while-accept loop all in one.
 	public Server(int port) throws IOException {
@@ -36,15 +36,37 @@ public class Server {
 		while (true) {
 			// Grab the next incoming connection
 			Socket socket = serverSocket.accept();
-			// Tell the world we've got it
+			String IP = "" + socket.getInetAddress();
 			Utils.stdOut("Incoming connection from " + socket);
-			createClient(socket);
+			//if its not a potential DOS attack, allow the socket to be created
+			if (canAccess(IP)) {
+				createSession(socket);
+			}
+			else {
+				Utils.stdErr("Refused connection to a potential DOS attack: " + IP);
+			}
 		}
 	}
 	
-	private void createClient(Socket socket) throws IOException {
-		// Create a new thread for this connection, and then forget
-		// about it
+	private boolean canAccess(String ip) {
+		boolean loggedBefore = lastLogged.containsKey(ip);
+		long now = Utils.getTime();
+		if (!loggedBefore) {
+			lastLogged.put(ip, now);
+			return true;
+		}
+		else {
+			long lastTime = lastLogged.get(ip);
+			if (now - lastTime > loginDelay) {
+				lastLogged.put(ip, now);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private void createSession(Socket socket) throws IOException {
+		// Create a new thread for this connection
 		Session thread = new Session(this, socket);
 		// Save this thread so we don't need to make it again
 		clients.put(socket, thread);
@@ -80,24 +102,9 @@ public class Server {
 		return Lists.newArrayList(rooms.values());
 	}
 	
-//	// Send a message to all clients (utility routine)
-//	void broadcast(ServerThread sender, String message) {
-//		// We synchronize on this because another thread might be
-//		// calling removeConnection() and this would screw us up
-//		// as we tried to walk through the list
-//		synchronized (clients) {
-//			// For each client ...
-//			for (ServerThread client : clients.values()) {
-//				client.sendMessage(sender, message);
-//			}
-//		}
-//	}
-
-	// Remove a socket, and it's corresponding output stream, from our
-	// list. This is usually called by a connection thread that has
-	// discovered that the connection to the client is dead.
+	// Remove a socket, and it's corresponding streams.
 	void removeConnection(Session client) {
-		// Synchronize so we don't mess up sendToAll() while it walks
+		// Synchronize so we don't mess up sending messages while it walks
 		// down the list of all output streams
 		synchronized (clients) {
 			// Tell the world
