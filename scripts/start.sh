@@ -1,3 +1,7 @@
+#! /bin/bash
+
+DIR=`dirname $0`
+source $DIR/stopServer.sh
 
 SRC_DIR=~/chat
 DST_DIR=~/chat_server
@@ -7,6 +11,7 @@ OUT_LOG=$LOG_DIR/out.log
 ERR_LOG=$LOG_DIR/err.log
 PORT=5555
 
+stopServer 0
 cd "../.."
 echo "Removing $DST_DIR"
 rm -rf $DST_DIR
